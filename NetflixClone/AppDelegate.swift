@@ -1,36 +1,56 @@
-//
-//  AppDelegate.swift
-//  NetflixClone
-//
-//  Created by Vasu Chand on 16/10/24.
-//
-
 import UIKit
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-
+    var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        
+        // Configure window
+        window = UIWindow(frame: UIScreen.main.bounds)
+        
+        // Initialize main tab bar controller safely
+        let mainTabBarController = MainTabBarViewController()
+        window?.rootViewController = mainTabBarController
+        window?.makeKeyAndVisible()
+        
+        // Configure appearance
+        configureAppearance()
+        
+        // Initialize services safely
+        NetworkManager.shared.configure()
+        
         return true
     }
+    
+    private func configureAppearance() {
+        // Safe appearance configuration
+        if #available(iOS 13.0, *) {
+            let appearance = UITabBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = UIColor.black
+            UITabBar.appearance().standardAppearance = appearance
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        } else {
+            UITabBar.appearance().barTintColor = UIColor.black
+            UITabBar.appearance().tintColor = UIColor.red
+        }
+        
+        // Navigation bar appearance
+        UINavigationBar.appearance().barTintColor = UIColor.black
+        UINavigationBar.appearance().tintColor = UIColor.white
+        UINavigationBar.appearance().titleTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white]
+    }
 
-    // MARK: UISceneSession Lifecycle
-
+    // MARK: UISceneSession Lifecycle (iOS 13+)
+    @available(iOS 13.0, *)
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        // Called when a new scene session is being created.
-        // Use this method to select a configuration to create the new scene with.
         return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
     }
 
+    @available(iOS 13.0, *)
     func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
         // Called when the user discards a scene session.
-        // If any sessions were discarded while the application was not running, this will be called shortly after application:didFinishLaunchingWithOptions.
-        // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
     }
-
-
 }
-
