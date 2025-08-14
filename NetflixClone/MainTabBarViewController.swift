@@ -1,37 +1,32 @@
-//
-//  ViewController.swift
-//  NetflixClone
-//
-//  Created by Vasu Chand on 16/10/24.
-//
-
 import UIKit
 
 class MainTabBarViewController: UITabBarController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view.
-        let vc1 = UINavigationController(rootViewController: HomeViewController())
-        let vc2 = UINavigationController(rootViewController: UpcomingViewController())
-        let vc3 = UINavigationController(rootViewController: SearchViewController())
-        let vc4 = UINavigationController(rootViewController: DownloadViewController())
+        setupTabBar()
+    }
+    
+    private func setupTabBar() {
+        let homeVC = UINavigationController(rootViewController: HomeViewController())
+        let upcomingVC = UINavigationController(rootViewController: UpcomingViewController())
+        let searchVC = UINavigationController(rootViewController: SearchViewController())
+        let downloadsVC = UINavigationController(rootViewController: DownloadViewController())
         
-        vc1.tabBarItem.image = UIImage(systemName: "hosue")
-        vc2.tabBarItem.image = UIImage(systemName: "play.circle")
-        vc3.tabBarItem.image = UIImage(systemName: "magnifyingglass")
-        vc4.tabBarItem.image = UIImage(systemName: "arrow.down.to.line")
+        homeVC.tabBarItem.image = UIImage(systemName: "house")
+        homeVC.tabBarItem.title = "Home"
         
-        vc1.title = "Netflix"
-        vc2.title = "Incoming"
-        vc3.title = "Top Search"
-        vc4.title = "Downloads"
+        upcomingVC.tabBarItem.image = UIImage(systemName: "play.circle")
+        upcomingVC.tabBarItem.title = "Coming Soon"
+        
+        searchVC.tabBarItem.image = UIImage(systemName: "magnifyingglass")
+        searchVC.tabBarItem.title = "Top Search"
+        
+        downloadsVC.tabBarItem.image = UIImage(systemName: "arrow.down.to.line")
+        downloadsVC.tabBarItem.title = "Downloads"
         
         tabBar.tintColor = .label
         
-        setViewControllers([vc1, vc2, vc3, vc4], animated: true)
+        setViewControllers([homeVC, upcomingVC, searchVC, downloadsVC], animated: true)
     }
-
-
 }
-
