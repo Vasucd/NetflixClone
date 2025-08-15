@@ -2,7 +2,7 @@ name: Bug Claude Direct
 
 on:
   repository_dispatch:
-    types: [new-bug]
+    types: [claude-bug-analysis]
 
 # Add permissions required for Claude and issue management
 permissions:

@@ -74,7 +74,7 @@ def trigger_claude_analysis(token, title, description):
     
     # Payload
     payload = {
-        "event_type": "new-bug",
+        "event_type": "claude-bug-analysis",
         "client_payload": {
             "title": title,
             "description": description
@@ -84,7 +84,7 @@ def trigger_claude_analysis(token, title, description):
     # Display information
     print_colored("📣 Sending bug to Claude for analysis:", Fore.BLUE if colorama_available else None)
     print(f"  Repository: {owner}/{repo}")
-    print(f"  Event type: new-bug")
+    print(f"  Event type: claude-bug-analysis")
     print(f"  Title: {title}")
     print(f"  Description: {description[:50]}..." if len(description) > 50 else f"  Description: {description}")
     

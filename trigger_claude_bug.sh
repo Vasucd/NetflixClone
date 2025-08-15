@@ -45,7 +45,7 @@ fi
 # Display information
 echo "📣 Sending bug to Claude for analysis:"
 echo "  Repository: $OWNER/$REPO"
-echo "  Event type: new-bug"
+echo "  Event type: claude-bug-analysis"
 echo "  Title: $TITLE"
 echo "  Description: ${DESCRIPTION:0:50}..."
 
@@ -53,7 +53,7 @@ echo "  Description: ${DESCRIPTION:0:50}..."
 JSON_FILE=$(mktemp)
 cat > "$JSON_FILE" << EOF
 {
-  "event_type": "new-bug",
+  "event_type": "claude-bug-analysis",
   "client_payload": {
     "title": "$TITLE",
     "description": "$DESCRIPTION"
