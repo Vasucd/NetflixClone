@@ -1,0 +1,145 @@
+name: Bug Claude Direct
+
+on:
+  repository_dispatch:
+    types: [new-bug]
+
+# Add permissions required for Claude and issue management
+permissions:
+  contents: write
+  id-token: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  analyze-bug:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      # Create issue with bug details but don't include @claude mention
+      - name: Create GitHub Issue
+        id: create-issue
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🐛 Bug: ${{ github.event.client_payload.title }}`,
+              body: `## Bug Report
+              
+              **Title:** ${{ github.event.client_payload.title }}
+              **Description:** ${{ github.event.client_payload.description }}
+              **Reported at:** ${new Date().toISOString()}
+              **Triggered by:** Auto Bug Reporter
+              
+              This issue was automatically created by the Bug Claude Direct workflow.
+              `
+            });
+            
+            console.log(`Issue created: ${issue.data.html_url}`);
+            
+            // Store the issue number for later use
+            core.setOutput('issue_number', issue.data.number);
+            core.setOutput('issue_url', issue.data.html_url);
+      
+      # Set up environment before running Claude
+      - name: Set up Claude environment
+        run: |
+          echo "Setting up Claude environment variables"
+          echo "ANTHROPIC_BASE_URL=https://eng-ai-model-gateway.sfproxy.devx-preprod.aws-esvc1-useast2.aws.sfdc.cl/chat/completions" >> $GITHUB_ENV
+          echo "ANTHROPIC_API_BASE=https://eng-ai-model-gateway.sfproxy.devx-preprod.aws-esvc1-useast2.aws.sfdc.cl/chat/completions" >> $GITHUB_ENV
+          echo "CLAUDE_CODE_USE_DIRECT_COMPLETION_ENDPOINT=1" >> $GITHUB_ENV
+          echo "ANTHROPIC_MODEL=claude-sonnet-4-20250514" >> $GITHUB_ENV
+          echo "Environment variables set"
+      
+      # Create the context for Claude with the bug details
+      - name: Create Claude Context
+        run: |
+          cat << EOF > claude-context.md
+          # Bug Analysis Request
+
+          Please analyze and fix the following bug:
+
+          **Title:** ${{ github.event.client_payload.title }}
+          **Description:** ${{ github.event.client_payload.description }}
+
+          1. Analyze what might be causing this issue
+          2. Suggest a solution with code examples
+          3. Provide any additional recommendations
+
+          Thank you!
+          EOF
+          
+          echo "Created context file for Claude:"
+          cat claude-context.md
+      
+      # Use Claude Code to analyze the bug directly
+      - name: Claude Code Analysis
+        id: claude-analysis
+        uses: anthropics/claude-code-action@v0
+        env:
+          ANTHROPIC_BASE_URL: https://eng-ai-model-gateway.sfproxy.devx-preprod.aws-esvc1-useast2.aws.sfdc.cl/chat/completions
+          ANTHROPIC_API_BASE: https://eng-ai-model-gateway.sfproxy.devx-preprod.aws-esvc1-useast2.aws.sfdc.cl/chat/completions
+          ANTHROPIC_MODEL: claude-sonnet-4-20250514
+          CLAUDE_CODE_USE_DIRECT_COMPLETION_ENDPOINT: "1"
+          CLAUDE_CODE_SKIP_BEDROCK_AUTH: "1"
+          CLAUDE_CODE_USE_BEDROCK: "1"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use claude-context.md as input instead of the issue
+          CLAUDE_CODE_INPUT_FILE: claude-context.md
+        with:
+          anthropic_model: "claude-3-sonnet-20240620"
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Output Claude's analysis to a file
+          output_file: claude-analysis.md
+      
+      # Post Claude's analysis as a comment on the issue
+      - name: Add Claude Analysis as Comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let analysisContent = '';
+            
+            try {
+              analysisContent = fs.readFileSync('claude-analysis.md', 'utf8');
+            } catch (error) {
+              console.log('Error reading Claude analysis:', error);
+              analysisContent = 'Claude analysis was not available.';
+            }
+            
+            // Add the analysis as a comment on the issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.create-issue.outputs.issue_number }},
+              body: `# Claude's Analysis
+
+            ${analysisContent}
+
+            ---
+            *This analysis was automatically generated by Claude AI.*`
+            });
+            
+            console.log('Added Claude analysis as a comment.');
+      
+      # Create a summary of the actions taken
+      - name: Create Summary
+        run: |
+          echo "## 🤖 Bug Analysis Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🐛 **Bug Title:** ${{ github.event.client_payload.title }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📝 **Bug Description:**" >> $GITHUB_STEP_SUMMARY
+          echo "${{ github.event.client_payload.description }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **Issue Created:** [${{ steps.create-issue.outputs.issue_number }}](${{ steps.create-issue.outputs.issue_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Claude AI has analyzed this bug and provided feedback in the issue comments." >> $GITHUB_STEP_SUMMARY
