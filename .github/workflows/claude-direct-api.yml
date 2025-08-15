@@ -87,56 +87,59 @@ jobs:
           # Save a short preview for the output
           echo "$CLAUDE_CONTENT" | head -n 20 > claude_preview.txt
       
-      # Create an issue with Claude's analysis
-      - name: Create GitHub Issue with Analysis
-        id: create_issue
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            
-            // Read Claude's analysis
-            const analysis = fs.readFileSync('claude_analysis.md', 'utf8');
-            
-            // Create issue with analysis
-            const issue = await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `🐛 Bug Analysis: ${{ github.event.client_payload.title }}`,
-              body: `## Bug Report
-              
-              **Title:** ${{ github.event.client_payload.title }}
-              **Description:** ${{ github.event.client_payload.description }}
-              
-              ## Claude's Analysis
-              
-              ${analysis}
-              
-              ---
-              *This analysis was generated automatically by Claude AI via direct API call.*
-              `
-            });
-            
-            console.log(`Issue created: ${issue.data.html_url}`);
-            
-            // Store the issue number and URL for later use
-            core.setOutput('issue_number', issue.data.number);
-            core.setOutput('issue_url', issue.data.html_url);
+      # Instead of creating an issue, save the analysis to the workflow outputs
+      - name: Save Claude Analysis
+        id: save_analysis
+        run: |
+          echo "Claude's analysis has been saved to claude_analysis.md"
+          
+          # Save the content to the workflow summary
+          echo "## 🐛 Bug Analysis: ${{ github.event.client_payload.title }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Description:** ${{ github.event.client_payload.description }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Claude's Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat claude_analysis.md >> $GITHUB_STEP_SUMMARY
+          
+          # Create a file with the full analysis (including timestamp) for archiving
+          mkdir -p claude_analyses
+          TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+          ANALYSIS_FILE="claude_analyses/bug_analysis_${TIMESTAMP}.md"
+          
+          cat > $ANALYSIS_FILE << EOF
+          # Bug Analysis: ${{ github.event.client_payload.title }}
+          
+          **Date:** $(date)
+          
+          ## Bug Report
+          
+          **Title:** ${{ github.event.client_payload.title }}
+          **Description:** ${{ github.event.client_payload.description }}
+          
+          ## Claude's Analysis
+          
+          $(cat claude_analysis.md)
+          
+          ---
+          *This analysis was generated automatically by Claude AI via direct API call.*
+          EOF
+          
+          echo "Analysis saved to $ANALYSIS_FILE"
+          
+          # Set outputs even without creating an issue
+          echo "analysis_file=$ANALYSIS_FILE" >> $GITHUB_OUTPUT
       
-      # Create a summary
-      - name: Create Summary
+      # Create a minimal summary (full analysis already saved in previous step)
+      - name: Log Analysis Completion
         run: |
           echo "## 🤖 Bug Analysis Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🐛 **Bug Title:** ${{ github.event.client_payload.title }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📝 **Bug Description:**" >> $GITHUB_STEP_SUMMARY
-          echo "${{ github.event.client_payload.description }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🔗 **Issue Created:** [#${{ steps.create_issue.outputs.issue_number }}](${{ steps.create_issue.outputs.issue_url }})" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "💡 **Analysis Preview:**" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          cat claude_preview.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "Analysis file: ${{ steps.save_analysis.outputs.analysis_file }}" >> $GITHUB_STEP_SUMMARY
+          
+      # Archive the analysis as an artifact
+      - name: Upload Analysis Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: claude-bug-analysis-${{ github.event.client_payload.title }}
+          path: claude_analysis.md
