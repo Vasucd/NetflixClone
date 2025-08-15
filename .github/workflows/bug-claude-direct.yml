@@ -4,15 +4,16 @@ on:
   repository_dispatch:
     types: [claude-bug-analysis]
 
-# Add permissions required for Claude and issue management
+# This workflow is deprecated in favor of claude-bug-issue.yml
+# which creates an issue with @claude mention to trigger the claude.yml workflow
 permissions:
-  contents: write
-  id-token: write
+  contents: read
   issues: write
-  pull-requests: write
 
 jobs:
   analyze-bug:
+    # Don't run this workflow anymore
+    if: false
     runs-on: self-hosted
     steps:
       - name: Checkout Repository

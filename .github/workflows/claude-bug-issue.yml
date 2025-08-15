@@ -1,0 +1,62 @@
+name: Claude Bug Issue
+
+on:
+  repository_dispatch:
+    types: [claude-bug-analysis]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  create-issue:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      # Create issue with @claude mention to trigger the claude.yml workflow
+      - name: Create GitHub Issue with Claude Mention
+        id: create-issue
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🐛 Bug: ${{ github.event.client_payload.title }}`,
+              body: `## Bug Report
+              
+              **Title:** ${{ github.event.client_payload.title }}
+              **Description:** ${{ github.event.client_payload.description }}
+              **Reported at:** ${new Date().toISOString()}
+              **Triggered by:** Auto Bug Reporter
+              
+              ---
+              
+              @claude Please analyze this bug and provide a solution.
+              `
+            });
+            
+            console.log(`Issue created: ${issue.data.html_url}`);
+            
+            // Store the issue number and URL for later use
+            core.setOutput('issue_number', issue.data.number);
+            core.setOutput('issue_url', issue.data.html_url);
+      
+      # Create a summary of the action taken
+      - name: Create Summary
+        run: |
+          echo "## 🤖 Bug Report Submitted to Claude" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🐛 **Bug Title:** ${{ github.event.client_payload.title }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📝 **Bug Description:**" >> $GITHUB_STEP_SUMMARY
+          echo "${{ github.event.client_payload.description }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **Issue Created:** [#${{ steps.create-issue.outputs.issue_number }}](${{ steps.create-issue.outputs.issue_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Claude has been mentioned in the issue and will automatically analyze the bug." >> $GITHUB_STEP_SUMMARY
