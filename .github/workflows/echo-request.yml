@@ -1,0 +1,44 @@
+name: Echo Request
+on:
+  repository_dispatch:
+    types: [new-bug]
+
+jobs:
+  echo-content:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Echo Title and Description
+        run: |
+          echo "==============================================="
+          echo "📣 ECHO REQUEST WORKFLOW"
+          echo "==============================================="
+          echo "🐛 Title: ${{ github.event.client_payload.title }}"
+          echo "📝 Description: ${{ github.event.client_payload.description }}"
+          echo "⏰ Timestamp: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo "👤 Triggered by: ${{ github.actor }}"
+          echo "==============================================="
+
+      - name: Create Issue
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Echo: ${context.payload.client_payload.title}`,
+              body: `## Echo Request
+              
+              **Title:** ${context.payload.client_payload.title}
+              **Description:** ${context.payload.client_payload.description}
+              **Timestamp:** ${new Date().toISOString()}
+              **Triggered by:** ${context.actor}
+              
+              This issue was automatically created by the Echo Request workflow.
+              `
+            });
+            
+            console.log(`Issue created: ${issue.data.html_url}`);

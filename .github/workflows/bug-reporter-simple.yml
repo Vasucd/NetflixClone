@@ -1,0 +1,26 @@
+name: Bug Reporter
+on:
+  repository_dispatch:
+    types: [new-bug]
+jobs:
+  create-issue:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        
+      - name: Generate bug.txt
+        run: |
+          echo "## Bug Report" > bug.txt
+          echo "" >> bug.txt
+          echo "**Title:** ${{ github.event.client_payload.title }}" >> bug.txt
+          echo "**Description:** ${{ github.event.client_payload.description }}" >> bug.txt
+          echo "" >> bug.txt
+          echo "**Reported at:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> bug.txt
+          echo "**Workflow run:** ${{ github.run_id }}" >> bug.txt
+      
+      - name: Create GitHub Issue
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "${{ github.event.client_payload.title }}"
+          content-filepath: ./bug.txt
