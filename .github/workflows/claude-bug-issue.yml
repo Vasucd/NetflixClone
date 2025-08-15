@@ -1,8 +1,10 @@
 name: Claude Bug Issue
 
+# This workflow is deprecated in favor of claude-direct-api.yml
+# which calls Claude directly via API instead of creating an issue with @claude
 on:
   repository_dispatch:
-    types: [claude-bug-analysis]
+    types: [claude-bug-issue] # Changed to avoid conflicts
 
 permissions:
   contents: read
